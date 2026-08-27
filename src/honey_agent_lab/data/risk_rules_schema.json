@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://27pm.org/honey-agent-lab/risk_rules_schema.json",
+  "title": "Honey Agent Lab risk rules",
+  "type": "array",
+  "minItems": 1,
+  "items": {"$ref": "#/$defs/rule"},
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "score", "severity", "reason", "keywords"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["none", "low", "medium", "high", "critical"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keywords": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

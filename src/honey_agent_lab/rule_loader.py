@@ -1,61 +1,80 @@
 from __future__ import annotations
 
+from functools import lru_cache
 import json
-import re
 from importlib import resources
 from pathlib import Path
 from typing import Any
 
-_REQUIRED_KEYS = {"code", "score", "severity", "reason", "keywords"}
-_CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
-_ALLOWED_SEVERITIES = {"none", "low", "medium", "high", "critical"}
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError, ValidationError
+
+
+def _resource_text(name: str) -> str:
+    return resources.files("honey_agent_lab").joinpath(f"data/{name}").read_text(encoding="utf-8")
+
+
+@lru_cache(maxsize=1)
+def load_rule_schema() -> dict[str, Any]:
+    try:
+        schema = json.loads(_resource_text("risk_rules_schema.json"))
+        Draft202012Validator.check_schema(schema)
+    except (OSError, json.JSONDecodeError, SchemaError) as exc:
+        raise ValueError(f"Unable to load risk rules schema: {exc}") from exc
+    return schema
+
+
+def _format_validation_error(exc: ValidationError) -> str:
+    location = "$"
+    if exc.absolute_path:
+        location += "".join(f"[{item}]" if isinstance(item, int) else f".{item}" for item in exc.absolute_path)
+    return f"Risk rules schema validation failed at {location}: {exc.message}"
+
+
+def _validate_document(raw: Any) -> list[dict[str, Any]]:
+    try:
+        Draft202012Validator(load_rule_schema()).validate(raw)
+    except ValidationError as exc:
+        raise ValueError(_format_validation_error(exc)) from exc
+
+    if not isinstance(raw, list):
+        raise ValueError("Risk rules document must be a JSON array")
+
+    codes = [item["code"] for item in raw]
+    if len(codes) != len(set(codes)):
+        raise ValueError("Risk rule codes must be unique")
+
+    for item in raw:
+        keywords = item["keywords"]
+        if len({keyword.casefold() for keyword in keywords}) != len(keywords):
+            raise ValueError(f"Rule {item['code']}: keywords must be unique ignoring case")
+        if not item["reason"].strip():
+            raise ValueError(f"Rule {item['code']}: reason must not be whitespace-only")
+        if any(not keyword.strip() for keyword in keywords):
+            raise ValueError(f"Rule {item['code']}: keywords must not be whitespace-only")
+    return raw
 
 
 def validate_rule(data: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(data, dict):
-        raise ValueError("Each rule must be a JSON object")
-    missing = _REQUIRED_KEYS - set(data)
-    extra = set(data) - _REQUIRED_KEYS
-    if missing:
-        raise ValueError(f"Rule missing required keys: {', '.join(sorted(missing))}")
-    if extra:
-        raise ValueError(f"Rule contains unknown keys: {', '.join(sorted(extra))}")
-    code = data["code"]
-    if not isinstance(code, str) or not _CODE_PATTERN.fullmatch(code):
-        raise ValueError("Rule code must match ^[A-Z][A-Z0-9_]*$")
-    score = data["score"]
-    if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
-        raise ValueError(f"Rule {code}: score must be integer 0..100")
-    severity = data["severity"]
-    if not isinstance(severity, str) or severity not in _ALLOWED_SEVERITIES:
-        raise ValueError(f"Rule {code}: invalid severity")
-    reason = data["reason"]
-    if not isinstance(reason, str) or not reason.strip():
-        raise ValueError(f"Rule {code}: reason must be non-empty")
-    keywords = data["keywords"]
-    if not isinstance(keywords, list) or not keywords or any(
-        not isinstance(keyword, str) or not keyword.strip() for keyword in keywords
-    ):
-        raise ValueError(f"Rule {code}: keywords must be a non-empty list of non-empty strings")
-    if len({keyword.casefold() for keyword in keywords}) != len(keywords):
-        raise ValueError(f"Rule {code}: keywords must be unique")
-    return {"code": code, "score": score, "severity": severity, "reason": reason.strip(), "keywords": keywords}
+    """Validate one rule using the same schema used for complete documents."""
+    validated = _validate_document([data])[0]
+    return {
+        "code": validated["code"],
+        "score": validated["score"],
+        "severity": validated["severity"],
+        "reason": validated["reason"].strip(),
+        "keywords": list(validated["keywords"]),
+    }
 
 
 def load_rules(path: Path | str | None = None):
     from .risk import RiskRule
+
     try:
-        if path is None:
-            text = resources.files("honey_agent_lab").joinpath("data/default_rules.json").read_text(encoding="utf-8")
-        else:
-            text = Path(path).read_text(encoding="utf-8")
+        text = _resource_text("default_rules.json") if path is None else Path(path).read_text(encoding="utf-8")
         raw = json.loads(text)
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Unable to load risk rules: {exc}") from exc
-    if not isinstance(raw, list) or not raw:
-        raise ValueError("Risk rules document must be a non-empty JSON array")
-    validated = [validate_rule(item) for item in raw]
-    codes = [item["code"] for item in validated]
-    if len(codes) != len(set(codes)):
-        raise ValueError("Risk rule codes must be unique")
+
+    validated = _validate_document(raw)
     return tuple(RiskRule.from_dict(item) for item in validated)

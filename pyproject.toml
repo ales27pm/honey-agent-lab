@@ -23,7 +23,7 @@ classifiers = [
   "Topic :: Security",
   "Topic :: Software Development :: Testing",
 ]
-dependencies = []
+dependencies = ["jsonschema>=4.23,<5.0"]
 
 [project.optional-dependencies]
 api = ["fastapi>=0.110,<1.0", "uvicorn>=0.29,<1.0"]
