@@ -9,9 +9,12 @@ Honey Agent Lab is defensive-only.
 - Do not connect the simulator to third-party agents.
 - Do not add network scanning.
 - Do not add autonomous outbound network behavior.
-- Do not add persistence or stealth behavior.
+- Do not add persistence or stealth behavior outside the local audit mechanisms.
 - Do not add GitHub Actions. Validate locally.
 - Keep adversarial behavior synthetic and fixture-based.
+- Declarative rule files are JSON data only; never load executable configuration or dynamic imports.
+- Fuzzing must remain deterministic, local, inert, and must never send generated messages externally.
+- The optional API binds to loopback by default. Non-loopback binding requires explicit `--allow-remote`, is for trusted isolated lab networks only, and must never make outbound calls.
 
 ## Required validation
 
