@@ -6,13 +6,13 @@ The project is deliberately boring in the right places: no real credentials, no 
 
 ## Status
 
-Version: `0.2.0`
+Version: `0.3.0`
 
-This release adds:
+This release hardens:
 
-- append-only audit ledger with hash chaining;
-- explainable risk scoring;
-- policy decisions with `allow`, `warn`, `isolate`, and `quarantine`;
+- immutable, hash-chained audit events with optional local JSONL persistence;
+- precompiled boundary-aware risk matching with contextual evidence;
+- declarative compound containment policy with `allow`, `warn`, `isolate`, and `quarantine`;
 - scripted scenario runner;
 - safe Hugging Face Space demo stub;
 - project guardrails for defensive-only development.
@@ -40,6 +40,8 @@ PYTHONPATH=src python3 -m honey_agent_lab list-scenarios
 PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001
 PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --json
 PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --export-audit /tmp/honey-agent-audit.jsonl
+PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --output-html /tmp/honey-agent-dashboard.html
+PYTHONPATH=src python3 -m honey_agent_lab verify-audit /tmp/honey-agent-audit.jsonl
 ```
 
 Expected defensive response for `scenario_001`:
@@ -68,7 +70,7 @@ Honey Agent observer
 Append-only Audit Ledger --> JSONL export --> human review
 ```
 
-See [`docs/SPEC_v0.2.md`](docs/SPEC_v0.2.md) and [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
+See [`docs/SPEC_v0.3.md`](docs/SPEC_v0.3.md) and [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md).
 
 ## GitHub bootstrap
 
@@ -91,13 +93,13 @@ git push -u origin main
 
 ## Hugging Face Space demo
 
-A safe demo stub is included in [`spaces/huggingface`](spaces/huggingface). It runs only local synthetic scenarios.
+A safe Gradio demo is included at [`app.py`](app.py), with deployment notes in [`docs/HF_SPACE.md`](docs/HF_SPACE.md). It runs only local synthetic scenarios.
 
 Deployment concept:
 
 1. Create a Hugging Face Space using Gradio.
 2. Copy this repo's `src/` package into the Space.
-3. Copy `spaces/huggingface/app.py` and `spaces/huggingface/requirements.txt` to the Space root.
+3. Use the repository root `app.py` and `requirements.txt` as the Space entrypoint and dependency file.
 4. Keep secrets disabled.
 5. Keep outbound integrations disabled.
 

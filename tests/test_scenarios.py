@@ -18,6 +18,16 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual(result.final_assessment.total_score, 100)
         self.assertTrue(result.ledger.verify_integrity())
 
+    def test_scenario_002_quarantines(self):
+        result = run_scenario("scenario_002")
+        self.assertEqual(result.final_decision.action, PolicyAction.QUARANTINE)
+        self.assertTrue(result.ledger.verify_integrity())
+
+    def test_scenario_003_isolates(self):
+        result = run_scenario("scenario_003")
+        self.assertEqual(result.final_decision.action, PolicyAction.ISOLATE)
+        self.assertTrue(result.ledger.verify_integrity())
+
     def test_scenario_004_allows(self):
         result = run_scenario("scenario_004")
         self.assertEqual(result.final_decision.action, PolicyAction.ALLOW)

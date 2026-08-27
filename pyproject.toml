@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "honey-agent-lab"
-version = "0.2.0"
+version = "0.3.0"
 description = "Defensive simulation lab for detecting agent-to-agent compromise and unauthorized coordination."
 readme = "README.md"
 requires-python = ">=3.10"
