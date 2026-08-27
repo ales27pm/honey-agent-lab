@@ -9,6 +9,7 @@ from pathlib import Path
 from . import __version__
 from .audit import AppendOnlyAuditLedger
 from .dashboard import render_static_dashboard
+from .fuzz_report import render_fuzz_report
 from .fuzzer import Fuzzer
 from .orchestrator import run_scenario
 from .risk import RiskScorer
@@ -34,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("list-scenarios", help="List available synthetic scenarios")
+
     run_parser = subcommands.add_parser("run-scenario", help="Run a synthetic scenario")
     run_parser.add_argument("name")
     run_parser.add_argument("--json", action="store_true")
@@ -41,13 +43,19 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--rules", type=Path)
     run_parser.add_argument("--export-audit", type=Path)
     run_parser.add_argument("--output-html", type=Path)
+
     verify_parser = subcommands.add_parser("verify-audit", help="Verify an exported audit JSONL file")
     verify_parser.add_argument("path", type=Path)
+
     fuzz_parser = subcommands.add_parser("fuzz", help="Run deterministic synthetic coverage fuzzing")
     fuzz_parser.add_argument("--limit", type=int, default=100)
     fuzz_parser.add_argument("--seed", type=int, default=42)
+    fuzz_parser.add_argument("--max-fragments", type=int, default=3)
+    fuzz_parser.add_argument("--obfuscation-prob", type=float, default=0.3)
     fuzz_parser.add_argument("--json", action="store_true")
     fuzz_parser.add_argument("--rules", type=Path)
+    fuzz_parser.add_argument("--output-html", type=Path)
+
     serve_parser = subcommands.add_parser("serve", help="Start the optional local FastAPI service")
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8000)
@@ -101,14 +109,24 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "fuzz":
         try:
-            summary = Fuzzer(args.seed, _load_optional_rules(args.rules)).run(args.limit)
+            summary = Fuzzer(
+                args.seed,
+                _load_optional_rules(args.rules),
+                max_fragments=args.max_fragments,
+                obfuscation_probability=args.obfuscation_prob,
+            ).run(args.limit)
         except ValueError as exc:
             print(str(exc), file=sys.stderr)
             return 2
+        if args.output_html:
+            args.output_html.parent.mkdir(parents=True, exist_ok=True)
+            args.output_html.write_text(render_fuzz_report(summary), encoding="utf-8")
+            print(f"Fuzz report written: {args.output_html}", file=sys.stderr)
         if args.json:
             print(json.dumps(summary.to_dict(), indent=2, sort_keys=True))
             return 0
         print(f"Synthetic messages: {summary.total_messages}")
+        print(f"Obfuscated messages: {summary.obfuscated_messages}")
         print(f"Actions: {summary.action_counts}")
         print(f"Severities: {summary.severity_counts}")
         print(f"Signals: {summary.triggered_codes}")
