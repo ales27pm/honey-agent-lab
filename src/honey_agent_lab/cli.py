@@ -60,6 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument("--host", default="127.0.0.1")
     serve_parser.add_argument("--port", type=int, default=8000)
     serve_parser.add_argument("--allow-remote", action="store_true")
+    serve_parser.add_argument("--reload", action="store_true", help="Development reload; loopback only")
     return parser
 
 
@@ -133,6 +134,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Potential false negatives: {len(summary.potential_false_negatives)}")
         return 0
     if args.command == "serve":
+        if args.reload and not _is_loopback(args.host):
+            print("Refusing --reload on a non-loopback host.", file=sys.stderr)
+            return 2
         if not _is_loopback(args.host) and not args.allow_remote:
             print("Refusing non-loopback bind without --allow-remote.", file=sys.stderr)
             return 2
@@ -143,6 +147,6 @@ def main(argv: list[str] | None = None) -> int:
         except ImportError:
             print("API dependencies missing. Install with: pip install -e '.[api]'", file=sys.stderr)
             return 2
-        uvicorn.run("honey_agent_lab.api:app", host=args.host, port=args.port)
+        uvicorn.run("honey_agent_lab.api:app", host=args.host, port=args.port, reload=args.reload)
         return 0
     return 2
