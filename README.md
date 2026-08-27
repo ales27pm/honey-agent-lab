@@ -6,15 +6,9 @@ The project has a strict boundary: no real credentials, live exploitation, third
 
 ## Status
 
-Version: `0.5.0`
+Version: `0.6.0`
 
-v0.5 adds:
-
-- multi-fragment deterministic fuzzing with bounded synthetic obfuscation;
-- JSON Schema validation for declarative risk rules;
-- static HTML fuzz coverage reports;
-- loopback-only development reload for the optional API;
-- all v0.4 audit, scoring, containment, dashboard, API, scenario, and Gradio functionality.
+v0.6 adds scenario-local multi-turn risk accumulation, Unicode evasion normalization, synthetic authorization validation, expanded compound containment patterns, and a three-turn grooming scenario. All v0.5 fuzzing, JSON Schema, HTML reports, API, audit, dashboard, and Gradio functionality remains.
 
 ## Validate locally
 
@@ -29,65 +23,14 @@ No GitHub Actions are required or expected.
 
 ```bash
 PYTHONPATH=src python3 -m honey_agent_lab list-scenarios
-PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --verbose
-PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --rules custom-rules.json
-PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --export-audit /tmp/honey-agent-audit.jsonl
-PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_001 --output-html /tmp/honey-agent-dashboard.html
-PYTHONPATH=src python3 -m honey_agent_lab verify-audit /tmp/honey-agent-audit.jsonl
+PYTHONPATH=src python3 -m honey_agent_lab run-scenario scenario_005 --verbose
 ```
 
-## Synthetic fuzzing
-
-```bash
-PYTHONPATH=src python3 -m honey_agent_lab fuzz --limit 100 --seed 42
-PYTHONPATH=src python3 -m honey_agent_lab fuzz --limit 20 --seed 1 --max-fragments 4 --obfuscation-prob 0.5 --json
-PYTHONPATH=src python3 -m honey_agent_lab fuzz --limit 50 --seed 7 --output-html /tmp/honey-agent-fuzz.html
-```
-
-Fuzzing is deterministic, local, inert, and never sends generated messages externally. Obfuscation exists only to measure detector coverage and may deliberately create synthetic false-negative candidates.
-
-## Declarative rules
-
-Default rules are validated against `src/honey_agent_lab/data/risk_rules_schema.json` using JSON Schema. Invalid configuration fails closed.
-
-## Optional local API
-
-```bash
-pip install -e '.[api]'
-PYTHONPATH=src python3 -m honey_agent_lab serve
-PYTHONPATH=src python3 -m honey_agent_lab serve --reload
-```
-
-Default binding is `127.0.0.1:8000`. `--reload` is development-only and is rejected for non-loopback hosts. A non-loopback bind without reload is refused unless `--allow-remote` is explicitly supplied. The API has no authentication and is intended only for a trusted isolated lab environment.
-
-Endpoints:
-
-- `GET /health`
-- `GET /scenarios`
-- `POST /run/{scenario_name}`
-
-## Architecture
-
-```text
-Synthetic messages / fuzz fixtures
-      |
-      v
-Simulated Agent Bus
-      |
-      v
-Honey Agent observer
-      |
-      +--> Risk Engine --> JSON Schema validated rules --> explainable findings
-      |
-      +--> Policy Engine --> allow/warn/isolate/quarantine
-      |
-      v
-Hash-chained Audit Ledger --> JSONL / dashboards --> human review
-```
+`scenario_005` demonstrates escalation across multiple turns: benign → warn → quarantine. Risk context is scoped to that scenario run and is discarded afterward.
 
 ## Documentation
 
-See `docs/SPEC_v0.5.md`, `docs/RULE_CONFIG.md`, `docs/FUZZING.md`, `docs/API.md`, `docs/THREAT_MODEL.md`, and `docs/HF_SPACE.md`.
+See `docs/SPEC_v0.6.md`, `docs/RULE_CONFIG.md`, `docs/FUZZING.md`, `docs/API.md`, `docs/THREAT_MODEL.md`, and `docs/HF_SPACE.md`.
 
 ## Non-goals
 
