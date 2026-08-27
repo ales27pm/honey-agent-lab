@@ -71,12 +71,10 @@ class Fuzzer:
         max_fragments: int = 3,
         obfuscation_probability: float = 0.3,
     ) -> None:
-        if max_fragments < 1:
-            raise ValueError("max_fragments must be >= 1")
         if not 0.0 <= obfuscation_probability <= 1.0:
             raise ValueError("obfuscation_probability must be between 0.0 and 1.0")
         self.seed = seed
-        self.max_fragments = min(max_fragments, len(ATTACK_FRAGMENTS))
+        self.max_fragments = min(max(1, max_fragments), len(ATTACK_FRAGMENTS))
         self.obfuscation_probability = obfuscation_probability
         self._rng = random.Random(seed)
         self.scorer = RiskScorer(rules)

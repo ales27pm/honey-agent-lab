@@ -34,9 +34,10 @@ class FuzzerTests(unittest.TestCase):
         self.assertGreaterEqual(summary.obfuscated_messages, 0)
         self.assertLessEqual(summary.obfuscated_messages, 25)
 
-    def test_invalid_controls_fail_closed(self):
-        with self.assertRaises(ValueError):
-            Fuzzer(max_fragments=0)
+    def test_max_fragments_clamps_to_one(self):
+        self.assertEqual(Fuzzer(max_fragments=0).max_fragments, 1)
+
+    def test_invalid_obfuscation_probability_fails_closed(self):
         with self.assertRaises(ValueError):
             Fuzzer(obfuscation_probability=1.1)
 
